@@ -1,268 +1,154 @@
-# 🥨 Nutri-Scan Bot
+# Nutri-Scan Bot
 
-A WhatsApp chatbot that analyzes nutritional labels of kids' snacks using AI vision technology. Simply send a photo of a nutrition label, and get instant nutritional advice and allergy information!
+A WhatsApp chatbot that analyzes nutritional labels of kids' snacks using OpenAI GPT-4 Vision. Built with Flask and Twilio for seamless WhatsApp integration.
 
-## 🎯 Features
+## Features
 
-- **📸 Image Analysis**: Send photos of nutrition labels via WhatsApp
-- **🤖 AI-Powered**: Uses GPT-4 Vision to analyze nutritional content
-- **👶 Kid-Focused**: Specifically designed for children's snack analysis
-- **⚠️ Allergy Detection**: Identifies allergens and cross-contamination risks
-- **📊 Parent-Friendly**: Provides clear, actionable advice for busy parents
-- **⚡ Fast Response**: Immediate acknowledgment with analysis in seconds
+- **AI-Powered Nutrition Analysis**: Uses GPT-4 Vision to analyze nutrition labels from photos
+- **WhatsApp Integration**: Seamless messaging through Twilio with 15-second webhook timeout compliance
+- **Child-Focused Guidance**: Specifically tailored advice for children's snack evaluation
+- **Allergy Detection**: Identifies allergens and cross-contamination risks
+- **Non-Conversational Design**: Always requests an image if none is provided
+- **Memory-Efficient Processing**: Streams images without local storage using base64 encoding
+- **Character Limit Handling**: Respects WhatsApp's 1600 character message limit
 
-## 🏗️ Architecture
+## Architecture
+
+The application follows a webhook-based architecture with background processing to handle Twilio's 15-second timeout requirement:
 
 ```
-📱 WhatsApp → 🌐 Twilio → 🚀 Flask App → 🤖 OpenAI GPT-4 Vision → 📊 Analysis
+WhatsApp User → Twilio Webhook (15s timeout) → Flask App → Background Thread → OpenAI GPT-4 Vision → Response
 ```
 
-## 🚀 Quick Start
+### Twilio Webhook Constraints
 
-### 1. Prerequisites
+- **15-Second Timeout**: Twilio requires webhook responses within 15 seconds
+- **Immediate TwiML Response**: App returns empty TwiML immediately to avoid timeout
+- **Background Processing**: Image analysis happens asynchronously in separate thread
+- **Character Limit**: WhatsApp messages limited to 1600 characters maximum
 
-- Python 3.8+
-- OpenAI API key
-- Twilio account with WhatsApp sandbox/approved number
-- ngrok or similar tunneling service for local development
+### OpenAI Integration
 
-### 2. Installation
+- **Endpoint**: Uses OpenAI Chat Completions API with vision capabilities
+- **Image Format**: Images converted to base64 encoding for API submission
+- **Model**: GPT-4 Vision (gpt-4o-mini) with 60-second timeout
+- **Processing**: Direct base64 image analysis without local file storage
 
-```bash
-# Clone the repository
-git clone <your-repo-url>
-cd Nutri-Scan-Bot
+## How It Works
 
-# Install dependencies
-pip install -r requirements.txt
-```
+### Complete Workflow
 
-### 3. Configuration
+1. **Message Reception**: User sends WhatsApp message to Twilio number along with a picture
+2. **Webhook Call**: Twilio sends POST request to `/whatsapp` endpoint
+3. **Immediate Response**: Flask returns empty TwiML within 15-second limit
+4. **Background Thread**: If image present, spawn background processing thread
+5. **Image Download**: Download image from Twilio's MediaUrl using requests
+6. **Base64 Conversion**: Convert downloaded image bytes to base64 string
+7. **OpenAI API Call**: Send base64 image to GPT-4 Vision API with nutrition analysis prompt
+8. **Response Processing**: Parse OpenAI response and format for WhatsApp
+9. **Character Limit Check**: Ensure response fits within 1600 character limit
+10. **WhatsApp Reply**: Send analysis back via Twilio REST API
 
-1. Copy the example environment file:
+### No Image Workflow
 
-   ```bash
-   cp .env.example .env
-   ```
+1. **Text Message**: User sends text without image
+2. **Immediate Request**: Bot responds: "Please send me a photo of the nutrition label you'd like me to analyze! 📸"
 
-2. Edit `.env` with your credentials:
-
-   ```env
-   # Twilio Configuration
-   TWILIO_ACCOUNT_SID=your_twilio_account_sid
-   TWILIO_AUTH_TOKEN=your_twilio_auth_token
-   TWILIO_FROM_NUMBER=+14155238886
-   TWILIO_WEBHOOK_URL=https://your-domain.ngrok.io/whatsapp
-
-   # OpenAI Configuration
-   OPENAI_API_KEY=your_openai_api_key
-   OPENAI_MODEL=gpt-4o-mini
-
-   # Flask Configuration
-   FLASK_ENV=development
-   FLASK_DEBUG=True
-   HOST=0.0.0.0
-   PORT=5000
-   ```
-
-### 4. Testing
-
-Test the nutrition analysis locally:
-
-```bash
-python test_nutrition.py
-```
-
-### 5. Run the Application
-
-```bash
-python run.py
-```
-
-### 6. Set up Webhook
-
-1. Use ngrok to expose your local server:
-
-   ```bash
-   ngrok http 5000
-   ```
-
-2. Update your Twilio webhook URL to: `https://your-ngrok-url.ngrok.io/whatsapp`
-
-## 📋 How It Works
-
-### User Experience
-
-1. **📱 Send Photo**: User sends a photo of a nutrition label via WhatsApp
-2. **⏳ Processing**: Bot acknowledges receipt and processes the image
-3. **📊 Analysis**: AI analyzes the nutritional content and allergens
-4. **💬 Response**: User receives detailed nutritional advice
-
-### Technical Flow
-
-1. **Webhook Reception**: Twilio forwards WhatsApp message to Flask app
-2. **Image Download**: App downloads image from Twilio's media URL
-3. **AI Processing**: OpenAI GPT-4 Vision analyzes the nutrition label
-4. **Response Generation**: Structured nutritional advice is generated
-5. **Message Delivery**: Response sent back via Twilio WhatsApp API
-
-## 🔧 API Endpoints
-
-### `/whatsapp` (POST)
-
-Webhook endpoint for Twilio WhatsApp messages.
-
-**Request Body** (from Twilio):
-
-- `Body`: Text message content
-- `From`: Sender's WhatsApp number
-- `MediaUrl0`: URL to attached media (if any)
-
-**Response**: TwiML response for immediate acknowledgment
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 Nutri-Scan-Bot/
 ├── app/
-│   ├── __init__.py              # Application factory
+│   ├── __init__.py              # Flask application factory
 │   ├── routes/
-│   │   └── routes.py            # WhatsApp webhook routes
+│   │   └── routes.py            # Webhook endpoint handler
 │   ├── services/
-│   │   ├── message_processor.py # Message processing logic
-│   │   ├── openai_client.py     # OpenAI vision client
-│   │   └── twilio_client.py     # Twilio messaging client
+│   │   ├── message_processor.py # Core message processing logic
+│   │   ├── openai_client.py     # OpenAI GPT-4 Vision client
+│   │   └── twilio_client.py     # Twilio messaging service
 │   ├── settings/
 │   │   └── config.py            # Configuration management
 │   └── utils/
-│       ├── logger.py            # Logging utilities
-│       └── twilio_validator.py  # Webhook validation
-├── saved_images/                # Downloaded images storage
-├── logs/                        # Application logs
+│       ├── image_handler.py     # Memory-efficient image processing
+│       ├── logger.py            # Application logging
+│       └── twilio_validator.py  # Webhook signature validation
+├── saved_images/                # Local image storage (for testing)
+├── logs/                        # Application log files
 ├── requirements.txt             # Python dependencies
 ├── run.py                      # Application entry point
-├── test_nutrition.py           # Testing script
-└── .env.example                # Environment template
+├── test_nutrition.py           # Local testing script
+└── README.md                   # This file
 ```
 
-## 🧪 Testing
+## Configuration
 
-### Local Image Testing
-
-1. Place nutrition label images in `saved_images/` folder
-2. Run: `python test_nutrition.py`
-
-### WhatsApp Testing
-
-1. Start the Flask app: `python run.py`
-2. Expose with ngrok: `ngrok http 5000`
-3. Update Twilio webhook URL
-4. Send photos to your Twilio WhatsApp number
-
-## 🔐 Security Features
-
-- **Webhook Validation**: Validates Twilio webhook signatures
-- **Environment Variables**: Sensitive data stored in environment variables
-- **Error Handling**: Comprehensive error handling with user-friendly messages
-- **Rate Limiting**: Background processing prevents webhook timeouts
-
-## 📊 Sample Analysis Output
-
-```
-🔍 NUTRITIONAL ANALYSIS:
-- Overall nutritional quality: Fair
-- High sugar content (12g per serving) - consider limiting frequency
-- Low fiber content (1g)
-- Contains some beneficial vitamins
-
-⚠️ ALLERGY INFORMATION:
-- Contains: Wheat, Milk, Soy
-- May contain: Tree nuts, Peanuts
-
-👶 PARENT GUIDANCE:
-- Suitable for children 3+ years
-- Limit to 1-2 times per week as an occasional treat
-- Better as an after-school snack than breakfast
-
-📊 QUICK VERDICT:
-Decent occasional snack but high in sugar - pair with fruit for better nutrition.
-```
-
-## 🚀 Deployment
-
-### Environment Variables for Production
+Create a `.env` file with the following variables:
 
 ```env
-FLASK_ENV=production
-FLASK_DEBUG=False
+# Twilio Configuration
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_FROM_NUMBER=+xxxxxxxxxxx
+
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4o-mini
+
+# Flask Configuration
+FLASK_ENV=development
+FLASK_DEBUG=True
 HOST=0.0.0.0
-PORT=8080
+PORT=5000
 ```
 
-### Deployment Options
+## Quick Setup
 
-- **Heroku**: Use `Procfile` with gunicorn
-- **Azure App Service**: Deploy with container or code
-- **AWS Elastic Beanstalk**: Python application deployment
-- **Google Cloud Run**: Containerized deployment
+1. **Create and activate virtual environment**:
 
-## 🔧 Configuration Options
+   **Windows:**
 
-### OpenAI Settings
+   ```bash
+   python -m venv venv
+   venv\Scripts\activate
+   ```
 
-- `OPENAI_MODEL`: Model to use (default: `gpt-4o-mini`)
-- Higher detail level for better text recognition in nutrition labels
+   **Linux/macOS:**
 
-### Twilio Settings
+   ```bash
+   python -m venv venv
+   source venv/bin/activate
+   ```
 
-- `MAX_SMS_CHARS`: Maximum message length (default: 1600)
-- Automatic message splitting for longer responses
+2. **Install dependencies**:
 
-## 🐛 Troubleshooting
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### Common Issues
+3. **Configure environment**:
 
-1. **OpenAI API Errors**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your credentials
+   ```
 
-   - Check API key validity
-   - Verify account has sufficient credits
-   - Ensure model availability
+4. **Run the application**:
 
-2. **Twilio Webhook Issues**
+   ```bash
+   python run.py
+   ```
 
-   - Verify webhook URL is accessible
-   - Check Twilio signature validation
-   - Ensure HTTPS for production
+5. **Set webhook in Twilio Console**:
+   - Navigate to Messaging → Try it out → Send a WhatsApp message
+   - Set webhook URL to: `https://your-domain.com/whatsapp`
 
-3. **Image Processing Issues**
-   - Check image format compatibility
-   - Verify image URL accessibility
-   - Ensure sufficient image quality
+## Dependencies
 
-### Debug Mode
-
-Set `FLASK_DEBUG=True` in `.env` for detailed error messages.
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## 📞 Support
-
-For issues and questions:
-
-- Create an issue in this repository
-- Check the troubleshooting section above
-- Review Twilio and OpenAI documentation
-
----
-
-**Made with ❤️ for better nutrition decisions**
+```
+flask==2.3.3          # Web framework
+twilio==8.10.3         # WhatsApp messaging
+python-dotenv==1.0.0   # Environment variables
+openai==1.12.0         # OpenAI client
+requests==2.31.0       # HTTP client
+gunicorn==21.2.0       # Production WSGI server
+```
