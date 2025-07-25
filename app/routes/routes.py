@@ -1,4 +1,6 @@
 import threading
+import os
+import requests
 from flask import Blueprint, request
 from twilio.twiml.messaging_response import MessagingResponse
 
@@ -12,53 +14,63 @@ logger = get_logger(__name__)
 
 @bp.route("/whatsapp", methods=["POST"])
 def whatsapp_webhook():
-    """
-    WhatsApp webhook handler with session-based conversation support.
-    
-    1) Validate the Twilio signature.
-    2) Read incoming message & sender phone number.
-    3) Spawn a background thread to handle session-based processing.
-    4) Return empty TwiML immediately.
-    """
     validate_twilio_request()
 
     incoming = request.values.get("Body", "").strip()
-    sender = request.values.get("From")  # WhatsApp phone number like "whatsapp:+15551234567"
-    
-    # Clean phone number (remove whatsapp: prefix if present)
+    sender = request.values.get("From")
+    media_url = request.form.get('MediaUrl0')
     phone_number = sender.replace("whatsapp:", "") if sender else ""
-    
-    logger.info(f"📥 Received from {phone_number}: {incoming[:100]}{'...' if len(incoming) > 100 else ''}")
+    logger.info(f"📥 Received Text from {phone_number}: {incoming[:100]}{'...' if len(incoming) > 100 else ''}")
 
-    def background_task(phone: str, body: str):
-        """Background task that processes the message with session context."""
-        try:
-            result = process_incoming(phone, body)
-            
-            if result.get("success"):
-                reply = result.get("aiResponse", "Sorry, I couldn't process your message.")
-            else:
-                reply = result.get("aiResponse", "Sorry, something went wrong. Please try again.")
-            
-            # Send reply back to user
-            send_whatsapp_message(to=sender, body=reply)  # Use original sender format for Twilio
-            logger.info(f"✅ Sent reply to {phone}: {len(reply)} chars")
-            
-        except Exception as e:
-            logger.error(f"❌ Error in background task for {phone}: {e}")
-            # Send error message to user
-            error_reply = "Sorry, I encountered an error processing your message. Please try again."
+    def background_task(phone: str):
+        if media_url:
+            logger.info(f"📥 Received Media from {phone_number}: {media_url}")
+
+            # Twilio credentials for Basic Auth
+            twilio_account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+            twilio_auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+
             try:
-                send_whatsapp_message(to=sender, body=error_reply)
-            except Exception as send_error:
-                logger.error(f"❌ Failed to send error message: {send_error}")
+                # Use HTTP Basic Auth with Twilio credentials to download the image
+                resp = requests.get(media_url, auth=(twilio_account_sid, twilio_auth_token))
+                resp.raise_for_status()
+
+                save_folder = "saved_images"
+                os.makedirs(save_folder, exist_ok=True)
+
+                import time
+                filename = f"{phone_number}_{int(time.time())}.jpg"
+                filepath = os.path.join(save_folder, filename)
+
+                with open(filepath, 'wb') as f:
+                    f.write(resp.content)
+
+                logger.info(f"✅ Saved image to {filepath}")
+            except Exception as e:
+                logger.error(f"❌ Failed to download or save image: {e}")
+                send_whatsapp_message(phone_number, "There was an error processing your image. Please try again.")    
 
     # Start background processing
     threading.Thread(
         target=background_task,
-        args=(phone_number, incoming),
+        args=(phone_number,),
         daemon=True
     ).start()
 
-    # Always return valid TwiML immediately to acknowledge receipt
-    return str(MessagingResponse())
+    if media_url:
+        # Log and acknowledge the received media
+        logger.info(f"📥 Received Media from {phone_number}: {media_url}")
+        response_message = "Thank you! Your image was received."
+    elif incoming:
+        # Log and request media if only text was received
+        logger.info(f"📥 No media received from {phone_number}, but text was: '{incoming}'")
+        response_message = "Please send an image!"
+    else:
+        # Log if nothing meaningful was received
+        logger.warning(f"⚠️ Empty message received from {phone_number}")
+        response_message = "We couldn't detect any image or text. Please try again."
+
+    # Create TwiML response
+    response = MessagingResponse()
+    response.message(response_message)
+    return str(response)
