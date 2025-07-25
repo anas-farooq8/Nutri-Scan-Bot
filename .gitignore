@@ -13,6 +13,3 @@ __pycache__/
 # Log files and directory
 logs/
 *.log
-
-# Saved images
-saved_images/

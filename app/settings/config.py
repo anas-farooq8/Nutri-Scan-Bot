@@ -34,5 +34,5 @@ class Config:
 
     # OpenAI API key for AI processing
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    # OpenAI model to use for AI responses
-    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+    # OpenAI model to use for AI responses (using vision-capable model)
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
