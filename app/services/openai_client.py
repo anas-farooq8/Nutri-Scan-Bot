@@ -77,8 +77,8 @@ Keep your response concise but informative, focusing on what parents need to kno
                         ]
                     }
                 ],
-                max_tokens=1000,
-                temperature=0.3,
+                max_tokens=600,
+                temperature=0.5,
                 timeout=60  # 60 seconds timeout for the request
             )
             

@@ -1,8 +1,8 @@
 import threading
-import os
 from flask import Blueprint, request
 from twilio.twiml.messaging_response import MessagingResponse
 
+from app.settings.config import Config
 from app.utils.twilio_validator import validate_twilio_request
 from app.services.message_processor import process_incoming
 from app.services.twilio_client import send_whatsapp_message
@@ -35,9 +35,9 @@ def whatsapp_webhook():
         """Background processing of the incoming message with memory-efficient streaming."""
         
         try:
-            # Twilio credentials for Basic Auth
-            twilio_account_sid = os.getenv("TWILIO_ACCOUNT_SID")
-            twilio_auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+            # Use Config class for Twilio credentials
+            twilio_account_sid = Config.TWILIO_ACCOUNT_SID
+            twilio_auth_token = Config.TWILIO_AUTH_TOKEN
             
             # Use memory-efficient streaming for media processing
             result = process_incoming(
