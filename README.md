@@ -12,6 +12,7 @@ A WhatsApp chatbot that analyzes nutritional labels of kids' snacks using OpenAI
 - **Smart Message Splitting**: Automatically splits long responses into multiple WhatsApp messages
 - **Rate Limiting**: Configurable per-user rate limiting to prevent abuse and control costs
 - **Character Limit Handling**: Respects WhatsApp's 1600 character message limit with intelligent splitting
+- **Rotating Logs**: 5MB log files with automatic rotation for production monitoring
 
 ## Architecture
 
@@ -86,7 +87,7 @@ Nutri-Scan-Bot/
 │   │   └── config.py            # Configuration management
 │   └── utils/
 │       ├── image_handler.py     # Memory-efficient image processing
-│       ├── logger.py            # Application logging
+│       ├── logger.py            # Rotating log system (5MB files)
 │       └── twilio_validator.py  # Webhook signature validation
 ├── saved_images/                # Local image storage (for testing)
 ├── logs/                        # Application log files
