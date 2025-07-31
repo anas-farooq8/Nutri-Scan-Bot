@@ -112,6 +112,7 @@ MAX_SMS_CHARS=1600                        # Max characters per WhatsApp message 
 # OpenAI Configuration
 OPENAI_API_KEY=your_openai_api_key        # Your OpenAI API key
 OPENAI_MODEL=gpt-4o-mini                  # OpenAI model with vision capabilities
+NUTRITION_PROMPT="Your custom prompt..."  # Customizable AI behavior for nutrition analysis
 
 # Flask Configuration
 FLASK_ENV=development                     # "production" or "development"

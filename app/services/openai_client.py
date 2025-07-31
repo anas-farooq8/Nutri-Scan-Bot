@@ -15,33 +15,8 @@ class NutritionAnalyzerClient:
         """Initialize the OpenAI client with configuration."""
         self.client = OpenAI(api_key=Config.OPENAI_API_KEY)
         self.model = Config.OPENAI_MODEL
-        
-        # Nutrition analysis prompt optimized for kids' snacks
-        self.nutrition_prompt = """
-You are a nutrition expert specializing in children's food. Analyze this nutritional label of a kids' snack and provide helpful advice for parents.
-
-Please provide:
-
-🔍 **NUTRITIONAL ANALYSIS:**
-- Overall nutritional quality (Good/Fair/Poor)
-- Key nutritional highlights or concerns
-- Sugar content assessment (especially important for kids)
-- Sodium levels
-- Any beneficial nutrients (fiber, vitamins, etc.)
-
-⚠️ **ALLERGY INFORMATION:**
-- List all allergens mentioned (nuts, dairy, gluten, etc.)
-- Any "may contain" warnings
-- Cross-contamination risks
-
-👶 **PARENT GUIDANCE:**
-- Is this snack appropriate for children?
-- How often should this be given as a snack?
-- Any specific age recommendations?
-- Healthier alternatives if this is not ideal
-
-Keep your response concise but informative, focusing on what parents need to know when shopping for their kids.
-"""
+        # Load nutrition analysis prompt from configuration
+        self.nutrition_prompt = Config.NUTRITION_PROMPT
     
     def analyze_nutrition_label_from_base64(self, base64_image: str) -> dict:
         """

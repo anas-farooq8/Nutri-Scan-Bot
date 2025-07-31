@@ -36,6 +36,8 @@ class Config:
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     # OpenAI model to use for AI responses (using vision-capable model)
     OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    # Customizable nutrition analysis prompt for AI behavior
+    NUTRITION_PROMPT = os.getenv("NUTRITION_PROMPT")
 
     # Rate limiter configuration
     RATE_LIMITER_MAX_REQUESTS_PER_MINUTE = int(os.getenv("RATE_LIMITER_MAX_REQUESTS_PER_MINUTE", 5))
